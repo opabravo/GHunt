@@ -11,10 +11,7 @@ from lib.utils import *
 
 def scrape(gaiaID, client, cookies, config, headers, regex_rev_by_id, is_headless):
     def get_datetime(date_published):
-        if date_published.split()[0] == "a":
-            nb = 1
-        else:
-            nb = int(date_published.split()[0])
+        nb = 1 if date_published.split()[0] == "a" else int(date_published.split()[0])
         if "minute" in date_published:
             delta = relativedelta(minutes=nb)
         elif "hour" in date_published:
@@ -29,7 +26,7 @@ def scrape(gaiaID, client, cookies, config, headers, regex_rev_by_id, is_headles
             delta = relativedelta(years=nb)
         else:
             delta = relativedelta()
-        return (datetime.today() - delta).replace(microsecond=0, second=0)
+        return (datetime.now() - delta).replace(microsecond=0, second=0)
 
     tmprinter = TMPrinter()
 
@@ -188,8 +185,14 @@ def get_confidence(geolocator, data, gmaps_radius):
 
     tmprinter.out("")
 
-    locations = {k: v for k, v in
-                 sorted(locations.items(), key=lambda k: len(k[1]["locations"]), reverse=True)}  # We sort it
+    locations = dict(
+        sorted(
+            locations.items(),
+            key=lambda k: len(k[1]["locations"]),
+            reverse=True,
+        )
+    )
+
 
     tmprinter.out("Identification of redundant areas...")
     to_del = []
@@ -199,7 +202,10 @@ def get_confidence(geolocator, data, gmaps_radius):
         for hash2 in locations:
             if hash2 in to_del or hash == hash2:
                 continue
-            if all([loc in locations[hash]["locations"] for loc in locations[hash2]["locations"]]):
+            if all(
+                loc in locations[hash]["locations"]
+                for loc in locations[hash2]["locations"]
+            ):
                 to_del.append(hash2)
     for hash in to_del:
         del locations[hash]

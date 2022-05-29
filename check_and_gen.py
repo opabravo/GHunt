@@ -80,8 +80,11 @@ def drive_interceptor(request):
 
     if request.url.endswith(('.woff2', '.css', '.jpeg', '.svg')):
         request.abort()
-    elif request.path != "/drive/my-drive" and "Accept" in request.headers and \
-        any([x in request.headers["Accept"] for x in ["font-woff"]]):
+    elif (
+        request.path != "/drive/my-drive"
+        and "Accept" in request.headers
+        and any(x in request.headers["Accept"] for x in ["font-woff"])
+    ):
         request.abort()
     if "authorization" in request.headers and "_" in request.headers["authorization"] and \
         request.headers["authorization"]:
@@ -109,8 +112,7 @@ def get_internal_tokens(driver, cookies, tmprinter):
     body = driver.page_source
     internal_token = body.split("appsitemsuggest-pa")[1].split(",")[3].strip('"')
 
-    tmprinter.out(f"Waiting for the authorization header, it "
-                    "can takes a few minutes...")
+    tmprinter.out("Waiting for the authorization header, it ")
 
     while True:
         if internal_auth and internal_token:
@@ -129,7 +131,7 @@ def gen_osid(cookies, domain, service):
                     cookies=cookies, headers=config.headers)
 
     body = bs(req.text, 'html.parser')
-    
+
     params = {x.attrs["name"]:x.attrs["value"] for x in body.find_all("input", {"type":"hidden"})}
 
     headers = {**config.headers, **{"Content-Type": "application/x-www-form-urlencoded"}}
@@ -139,9 +141,7 @@ def gen_osid(cookies, domain, service):
     if not osid_header:
         exit("[-] No OSID header detected, exiting...")
 
-    osid = osid_header[0].split("OSID=")[1].split(";")[0]
-    
-    return osid
+    return osid_header[0].split("OSID=")[1].split(";")[0]
 
 def get_clientauthconfig_key(cookies):
     """ Extract the Client Auth Config API token."""
@@ -150,24 +150,23 @@ def get_clientauthconfig_key(cookies):
                     cookies=cookies, headers=config.headers)
 
     if req.status_code == 200 and "pantheon_apiKey" in req.text:
-        cac_key = req.text.split('pantheon_apiKey\\x22:')[1].split(",")[0].strip('\\x22')
-        return cac_key
+        return req.text.split('pantheon_apiKey\\x22:')[1].split(",")[0].strip('\\x22')
     exit("[-] I can't find the Client Auth Config API...")
 
 def check_cookies(cookies):
     wanted = ["authuser", "continue", "osidt", "ifkv"]
 
-    req = httpx.get(f"https://accounts.google.com/ServiceLogin?service=cloudconsole&osid=1&continue=https://console.cloud.google.com/&followup=https://console.cloud.google.com/&authuser=0",
-                    cookies=cookies, headers=config.headers)
+    req = httpx.get(
+        "https://accounts.google.com/ServiceLogin?service=cloudconsole&osid=1&continue=https://console.cloud.google.com/&followup=https://console.cloud.google.com/&authuser=0",
+        cookies=cookies,
+        headers=config.headers,
+    )
+
 
     body = bs(req.text, 'html.parser')
-    
-    params = [x.attrs["name"] for x in body.find_all("input", {"type":"hidden"})]
-    for param in wanted:
-        if param not in params:
-            return False
 
-    return True
+    params = [x.attrs["name"] for x in body.find_all("input", {"type":"hidden"})]
+    return all(param in params for param in wanted)
 
 def getting_cookies(cookies):
     choices = ("You can facilitate configuring GHunt by using the GHunt Companion extension on Firefox, Chrome, Edge and Opera here :\n"
@@ -224,7 +223,7 @@ if __name__ == '__main__':
         if new_gen_inp == "y":
             cookies = getting_cookies(cookies)
             new_cookies_entered = True
-            
+
         elif not valid:
             exit("Please put valid cookies. Exiting...")
 
@@ -236,7 +235,7 @@ if __name__ == '__main__':
             print("\n[+] The cookies seems valid !")
         else:
             exit("\n[-] Seems like the cookies are invalid, try regenerating them.")
-    
+
     if not new_cookies_entered:
         cookies = cookies_from_file
         choice = input("Do you want to generate new tokens ? (Y/n) ").lower()
@@ -265,7 +264,7 @@ if __name__ == '__main__':
         exit("[-] I can't find the Google Docs token in the source code...\n")
     else:
         gdoc_token = html.split(trigger)[1][:100].split('"')[0]
-        print("Google Docs Token => {}".format(gdoc_token))
+        print(f"Google Docs Token => {gdoc_token}")
 
     print("Generating OSID for the Cloud Console...")
     osid = gen_osid(cookies, "console.cloud.google.com", "cloudconsole")
